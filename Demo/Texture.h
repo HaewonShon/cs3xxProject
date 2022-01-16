@@ -19,10 +19,8 @@ End Header --------------------------------------------------------*/
 struct Texture
 {
 	Texture(std::filesystem::path const& filepath);
-	Texture(std::vector<std::filesystem::path> const& filepaths);
 	~Texture();
 	void ReadFile(std::filesystem::path const& filepath);
-	void ReadFile_PNG(std::filesystem::path const& filepath);
 	GLuint textureID;
 	int width;
 	int height;

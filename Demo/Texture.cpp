@@ -16,9 +16,6 @@ End Header --------------------------------------------------------*/
 #include <sstream>
 #include <fstream>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 Texture::Texture(std::filesystem::path const& filepath)
 {
     ReadFile(filepath);
@@ -37,26 +34,6 @@ Texture::Texture(std::filesystem::path const& filepath)
 
     delete[] data;
     data = nullptr;
-}
-
-Texture::Texture(std::vector<std::filesystem::path> const& filepaths)
-{
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-    int index = 0;
-    for (std::filesystem::path const& filepath : filepaths)
-    {
-        ReadFile_PNG(filepath);
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+index++, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        stbi_image_free(data);
-    }
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
 Texture::~Texture()
@@ -120,16 +97,5 @@ void Texture::ReadFile(std::filesystem::path const& filepath)
         data[dataIndex++] = static_cast<unsigned char>(val);
     }
 
-    return;
-}
-
-void Texture::ReadFile_PNG(std::filesystem::path const& filepath)
-{
-    if (!filepath.has_filename())
-    {
-        throw std::runtime_error("Could not find texture file : " + filepath.string());
-    }
-
-    data = stbi_load(filepath.string().c_str(), &width, &height, &channels, 0);
     return;
 }

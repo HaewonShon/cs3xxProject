@@ -175,10 +175,14 @@ void Mesh::UpdateModelNormalizeMatrix() noexcept
 		if (v.z > max.z) max.z = v.z;
 	}
 
+	//glm::vec3 normalizedV = glm::vec3((v.x - min.x) / length.x,
+	//	(v.y - min.y) / length.y,
+	//	(v.z - min.z) / length.z);
+	//normalizedV = 2.f * normalizedV - glm::vec3(1.f);
+
 	glm::vec3 length = max - min;
-	float maxLength = (length.x >= length.y && length.x >= length.z) ? length.x : ((length.y >= length.z) ? length.y : length.z);
 	center = (min + max) / 2.f;
-	modelNormalizeMatrix = glm::translate(glm::vec3(-1.f)) * glm::scale(glm::vec3(2.f / maxLength)) * glm::translate(-min);
+	modelNormalizeMatrix = glm::translate(glm::vec3(-1.f)) * glm::scale(glm::vec3(2.f / length)) * glm::translate(-min);
 }
 
 void Mesh::RebuildUVs(Mesh::UVType uvType, bool useNormalForTexture) noexcept
@@ -245,7 +249,6 @@ void Mesh::BuildFaceNormal() noexcept
 	}
 
 	// compute face normals
-	faceNormals.resize(indicesSize / 3);
 	faceNormalVertices.resize(indicesSize / 3 * 2); // one for center, one for center + normalstatic_cast<GLsizei>(
 	for (size_t i = 0; i < indicesSize; i += 3)
 	{
@@ -258,9 +261,8 @@ void Mesh::BuildFaceNormal() noexcept
 		glm::vec3 vecA = v2 - v1;
 		glm::vec3 vecB = v0 - v1;
 		glm::vec3 normal = glm::normalize(glm::cross(vecA, vecB));
-		faceNormals[i / 3] = normal;
 		faceNormalVertices[i / 3 * 2] = center; // center
-		faceNormalVertices[i / 3 * 2 + 1] = center + normal;
+		faceNormalVertices[i / 3 * 2 + 1] = center + normal / modelNormalizeMatrix[0][0];
 	}
 
 	normalIndices.resize(faceNormalVertices.size());
@@ -323,22 +325,7 @@ void Mesh::BuildVertexNormal() noexcept
 	// compute vertex normals
 	for (size_t i = 0; i < indices.size(); i += 3)
 	{
-		glm::vec3 normal = glm::normalize(faceNormals[(i / 3)]);
-		if (std::abs(normal.x) == 1.f)
-		{
-			normal.y = 0.f;
-			normal.z = 0.f;
-		}
-		else if (std::abs(normal.y) == 1.f)
-		{
-			normal.x = 0.f;
-			normal.z = 0.f;
-		}
-		else if (std::abs(normal.z) == 1.f)
-		{
-			normal.x = 0.f;
-			normal.y = 0.f;
-		}
+		glm::vec3 normal = faceNormalVertices[(i / 3) * 2 + 1] - faceNormalVertices[(i / 3) * 2];
 		vertexNormalSet[indices[i]].insert(normal);
 		vertexNormalSet[indices[i + 1]].insert(normal);
 		vertexNormalSet[indices[i + 2]].insert(normal);
@@ -353,7 +340,7 @@ void Mesh::BuildVertexNormal() noexcept
 		{
 			normalVector += normal;
 		}
-		normalVector = glm::normalize(normalVector);
+		normalVector = glm::normalize(normalVector / static_cast<float>(vertexNormalSet.size()));
 		vertexNormals[i] = normalVector;
 		vertexNormalVertices[i * 2 + 1] = vertices[i] + normalVector / modelNormalizeMatrix[0][0];
 	}

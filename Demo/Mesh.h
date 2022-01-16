@@ -70,7 +70,6 @@ protected:
 	std::vector<glm::vec2> uvs{};
 	std::vector<unsigned int> indices{};
 	std::vector<glm::vec3> vertexNormals{};
-	std::vector<glm::vec3> faceNormals{};
 	size_t verticesSize{};
 	size_t indicesSize{};
 	GLenum primitiveType;

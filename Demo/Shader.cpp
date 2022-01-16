@@ -120,11 +120,6 @@ void Shader::Disable() const noexcept
     glUseProgram(0);
 }
 
-void Shader::SetUniform(const char* uniformName, bool value) const noexcept
-{
-    glUniform1i(GetUniformLocation(uniformName), value);
-}
-
 void Shader::SetUniform(const char* uniformName, int value) const noexcept
 {
     glUniform1i(GetUniformLocation(uniformName), value);

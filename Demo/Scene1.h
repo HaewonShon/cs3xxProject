@@ -34,8 +34,6 @@ public:
 	void LoadShaders();
 private:
 	void SetUniformBuffer();
-	void SetupFBO();
-	void RenderToTexture();
 	Shader basicShader;
 	Shader PhongLightingShader_CPU;
 	Shader PhongShadingShader_CPU;
@@ -45,24 +43,17 @@ private:
 	Shader BlinnShadingShader_GPU;
 	Shader displayNormalShader;
 
-
-	Shader skyboxShader; 
-	Shader EnvironmentalMappingShader;
-
-	int i = 0;
-
 	std::vector<Mesh*> meshContainer;
 
 	// scene info
 	Mesh* mainObject;
 	Mesh* plane;
-	Mesh* skybox;
 	Mesh* testCube;
 	Mesh* orbit;
 	glm::mat4 viewMatrix;
 
 	// scene control
-	glm::vec3 cameraPosition{ 0.f, 0.f, 6.5f };
+	glm::vec3 cameraPosition{ 0.f, 2.5f, 5.f };
 	bool isLightsRotate{ true };
 	// global variables
 	glm::vec3 globalAmbient{ 0.f };
@@ -84,7 +75,6 @@ private:
 	int currentTexProjMode{ 2 };
 	int currentPickedProcessor{ 0 };
 	int currentPickedEntity{ 0 };
-	int currentPickedEnvMapping{ 2 };
 
 	float objectScale{ 1.f };
 	glm::vec3 objectRotation{ 0.f };
@@ -96,8 +86,6 @@ private:
 	Texture diffuseTexture{"..\\Textures\\metal_roof_diff_512x512.ppm"};
 	Texture specularTexture{ "..\\Textures\\metal_roof_spec_512x512.ppm" };
 	Texture whiteTexture{ "..\\Textures\\white.ppm" };
-	Texture skyboxTexture{ {"..\\Textures\\skybox\\right.jpg", "..\\Textures\\skybox\\left.jpg", "..\\Textures\\skybox\\top.jpg",
-		"..\\Textures\\skybox\\bottom.jpg", "..\\Textures\\skybox\\front.jpg", "..\\Textures\\skybox\\back.jpg"} };
 
 	// shader
 	int currentPickedShader{ 0 };
@@ -109,22 +97,7 @@ private:
 	GLuint phongLightingIndex_GPU;
 	GLuint phongShadingIndex_GPU;
 	GLuint blinnShadingIndex_GPU;
-	GLuint environmentalMappingIndex;
 
 	GLuint uniformBlockID;
 	const size_t uniformStructSize = 80;
-
-	// framebuffer id
-	GLuint frameBufferID[6];
-	GLuint renderedTexture[6];
-	GLuint depthrenderbuffer[6];
-
-	// ImGui - Assignment 3
-	float refractionIndex = 1.f;
-	bool useChromaticAberration = false;
-	int currentPickedMaterial = 0;
-	float fresnelPower = 5.f;
-	float chromaticMultiplier = 1.f;
-
-	bool usePhongShading = false;
 };

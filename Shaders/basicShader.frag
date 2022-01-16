@@ -12,11 +12,11 @@ Creation date: September 7, 2021
 End Header --------------------------------------------------------*/
 
 #version 400 core
-layout (location = 0) out vec3 color;
 
+out vec4 color;
 uniform vec3 inputColor;
 
 void main()
 {
-   color = inputColor;
+   color = vec4(inputColor, 1.0);
 }

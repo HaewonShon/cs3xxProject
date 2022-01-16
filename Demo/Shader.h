@@ -34,7 +34,6 @@ public:
     void Enable() const noexcept;
     void Disable() const noexcept;
 
-    void SetUniform(const char* name, bool value) const noexcept;
     void SetUniform(const char* name, int value) const noexcept;
     void SetUniform(const char* name, float value) const noexcept;
     void SetUniform(const char* name, const glm::vec3& vec) const noexcept;
