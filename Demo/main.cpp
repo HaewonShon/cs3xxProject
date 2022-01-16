@@ -14,7 +14,7 @@ End Header --------------------------------------------------------*/
 #include "Demo.h"
 #include <stdexcept>
 #include <iostream>
-#include "Scene1.h"
+#include "Scene.h"
 
 int main()
 try {
@@ -23,7 +23,7 @@ try {
 
 		demo.Init();
 
-		demo.CreateAndGoToLevel<Scene1>();
+		demo.CreateAndGoToLevel<Scene>();
 
 		while (demo.IsRunning())
 		{

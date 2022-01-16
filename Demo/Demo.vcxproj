@@ -198,7 +198,7 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="ObjectConverter.cpp" />
-    <ClCompile Include="Scene1.cpp" />
+    <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Texture.cpp" />
   </ItemGroup>
@@ -212,11 +212,10 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
     <ClInclude Include="..\External\imgui\imstb_textedit.h" />
     <ClInclude Include="..\External\imgui\imstb_truetype.h" />
     <ClInclude Include="Demo.h" />
-    <ClInclude Include="IScene.h" />
     <ClInclude Include="LightSphere.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="ObjectConverter.h" />
-    <ClInclude Include="Scene1.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Texture.h" />
   </ItemGroup>

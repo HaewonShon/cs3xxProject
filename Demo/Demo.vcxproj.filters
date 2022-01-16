@@ -3,7 +3,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Demo.cpp" />
-    <ClCompile Include="Scene1.cpp">
+    <ClCompile Include="Scene.cpp">
       <Filter>Levels</Filter>
     </ClCompile>
     <ClCompile Include="..\External\imgui\imgui.cpp">
@@ -32,8 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Demo.h" />
-    <ClInclude Include="IScene.h" />
-    <ClInclude Include="Scene1.h">
+    <ClInclude Include="Scene.h">
       <Filter>Levels</Filter>
     </ClInclude>
     <ClInclude Include="..\External\imgui\imconfig.h">

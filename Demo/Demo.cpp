@@ -28,7 +28,7 @@ void Demo::Init()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-    window = SDL_CreateWindow("CS300 Graphics Demo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
+    window = SDL_CreateWindow("CS350 Graphics Demo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
         1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     if (window == nullptr)           
@@ -75,6 +75,23 @@ void Demo::Update() noexcept
         {
         case SDL_QUIT:
             isRunning = false;
+            break;
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.scancode)
+            {
+            case SDL_SCANCODE_A:
+                currentLevel->UpdateCamA();
+                break;
+            case SDL_SCANCODE_S:
+                currentLevel->UpdateCamS();
+                break;
+            case SDL_SCANCODE_D:
+                currentLevel->UpdateCamD();
+                break;
+            case SDL_SCANCODE_W:
+                currentLevel->UpdateCamW();
+                break;
+            }
             break;
         }
     }

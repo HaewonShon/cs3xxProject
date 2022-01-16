@@ -12,8 +12,6 @@ Creation date: August 29, 2021
 End Header --------------------------------------------------------*/
 
 #pragma once
-
-#include "IScene.h"
 #include "Shader.h"
 #include "Texture.h"
 #include <glm/gtc/constants.hpp>
@@ -22,25 +20,29 @@ End Header --------------------------------------------------------*/
 class Mesh;
 class LightSphere;
 
-class Scene1 : public IScene
+class Scene
 {
 public:
-	void Init() override;
-	void Update([[maybe_unused]] float dt) override;
-	void Clear() override;
-	void Draw() override;
-	void DrawGUI() override;
-	void Reload() override;
+	void Init();
+	void Update([[maybe_unused]] float dt);
+	void Clear();
+	void Draw();
+	void DrawGUI();
+	void Reload();
 	void LoadShaders();
+
+	void UpdateCamA();
+	void UpdateCamS();
+	void UpdateCamD();
+	void UpdateCamW();
 private:
 	void SetUniformBuffer();
+
+	void RenderDeferredObjects();
+	void RenderDebugObjects();
+
 	Shader basicShader;
-	Shader PhongLightingShader_CPU;
-	Shader PhongShadingShader_CPU;
-	Shader BlinnShadingShader_CPU;
-	Shader PhongLightingShader_GPU;
-	Shader PhongShadingShader_GPU;
-	Shader BlinnShadingShader_GPU;
+	Shader PhongShadingShader;
 	Shader displayNormalShader;
 
 	std::vector<Mesh*> meshContainer;
@@ -54,6 +56,7 @@ private:
 
 	// scene control
 	glm::vec3 cameraPosition{ 0.f, 2.5f, 5.f };
+	glm::vec3 cameraLookAt{};
 	bool isLightsRotate{ true };
 	// global variables
 	glm::vec3 globalAmbient{ 0.f };
@@ -73,7 +76,6 @@ private:
 	// model
 	int currentPickedObject{ 1 };
 	int currentTexProjMode{ 2 };
-	int currentPickedProcessor{ 0 };
 	int currentPickedEntity{ 0 };
 
 	float objectScale{ 1.f };
@@ -91,12 +93,7 @@ private:
 	int currentPickedShader{ 0 };
 
 	// uniform block
-	GLuint phongLightingIndex_CPU;
-	GLuint phongShadingIndex_CPU;
-	GLuint blinnShadingIndex_CPU;
-	GLuint phongLightingIndex_GPU;
-	GLuint phongShadingIndex_GPU;
-	GLuint blinnShadingIndex_GPU;
+	GLuint phongShadingIndex;
 
 	GLuint uniformBlockID;
 	const size_t uniformStructSize = 80;

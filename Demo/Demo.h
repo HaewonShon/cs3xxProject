@@ -14,7 +14,7 @@ End Header --------------------------------------------------------*/
 #pragma once
 
 #include <memory>
-#include "IScene.h"
+#include "Scene.h"
 
 struct SDL_Window;
 
@@ -36,7 +36,7 @@ private:
 
 	uint32_t timestamp;
 
-	std::unique_ptr<IScene> currentLevel;
+	std::unique_ptr<Scene> currentLevel;
 };
 
 template <typename LEVEL>

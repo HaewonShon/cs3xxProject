@@ -11,7 +11,7 @@ Author: Haewon Shon (haewon.shon@digipen.edu, 180002920)
 Creation date: August 29, 2021
 End Header --------------------------------------------------------*/
 
-#include "Scene1.h"
+#include "Scene.h"
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
@@ -22,7 +22,7 @@ End Header --------------------------------------------------------*/
 #include "LightSphere.h"
 #include "ObjectConverter.h"
 
-void Scene1::Init()
+void Scene::Init()
 {
 	/////////////// SHADER //////////////
 	LoadShaders();
@@ -70,19 +70,8 @@ void Scene1::Init()
 	currentPickedObject = 0;
 
 	/////////////// UNIFORM BLOCK SETUP //////////////
-	phongLightingIndex_CPU = glGetUniformBlockIndex(PhongLightingShader_CPU.GetID(), "LightInfo");
-	glUniformBlockBinding(PhongLightingShader_CPU.GetID(), phongLightingIndex_CPU, 0);
-	phongShadingIndex_CPU = glGetUniformBlockIndex(PhongShadingShader_CPU.GetID(), "LightInfo");
-	glUniformBlockBinding(PhongShadingShader_CPU.GetID(), phongShadingIndex_CPU, 0);
-	blinnShadingIndex_CPU = glGetUniformBlockIndex(BlinnShadingShader_CPU.GetID(), "LightInfo");
-	glUniformBlockBinding(BlinnShadingShader_CPU.GetID(), blinnShadingIndex_CPU, 0);
-
-	phongLightingIndex_GPU = glGetUniformBlockIndex(PhongLightingShader_GPU.GetID(), "LightInfo");
-	glUniformBlockBinding(PhongLightingShader_GPU.GetID(), phongLightingIndex_GPU, 0);
-	phongShadingIndex_GPU = glGetUniformBlockIndex(PhongShadingShader_GPU.GetID(), "LightInfo");
-	glUniformBlockBinding(PhongShadingShader_GPU.GetID(), phongShadingIndex_GPU, 0);
-	blinnShadingIndex_GPU = glGetUniformBlockIndex(BlinnShadingShader_GPU.GetID(), "LightInfo");
-	glUniformBlockBinding(BlinnShadingShader_GPU.GetID(), blinnShadingIndex_GPU, 0);
+	phongShadingIndex = glGetUniformBlockIndex(PhongShadingShader.GetID(), "LightInfo");
+	glUniformBlockBinding(PhongShadingShader.GetID(), phongShadingIndex, 0);
 
 	glGenBuffers(1, &uniformBlockID);
 	glBindBuffer(GL_UNIFORM_BUFFER, uniformBlockID);
@@ -99,7 +88,7 @@ void Scene1::Init()
 	glBindTexture(GL_TEXTURE_2D, whiteTexture.textureID);
 };
 
-void Scene1::Update(float dt)
+void Scene::Update(float dt)
 {
 	viewMatrix = glm::perspective(45.f, 1280.f / 720.f, 0.1f, 10.f)
 		* glm::lookAt(cameraPosition,
@@ -116,7 +105,7 @@ void Scene1::Update(float dt)
 	}
 }
 
-void Scene1::Clear()
+void Scene::Clear()
 {
 	for (Mesh* mesh : meshContainer)
 	{
@@ -131,204 +120,26 @@ void Scene1::Clear()
 	glDeleteBuffers(1, &uniformBlockID);
 
 	basicShader.Delete();
-	PhongLightingShader_CPU.Delete();
-	PhongShadingShader_CPU.Delete();
-	BlinnShadingShader_CPU.Delete();
+	PhongShadingShader.Delete();
 	displayNormalShader.Delete();
 }
 
-void Scene1::Draw()
+void Scene::Draw()
 {
 	/////////////// SCENE CLEAR ///////////////
 	glClearColor(fog.x, fog.y, fog.z, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	/////////////// COLOR INIT //////////////
-	glm::vec3 otherColor{ 1.f };
-	glm::vec3 fNormalColor{ 0.f, 0.f, 1.f };
-	glm::vec3 vNormalColor = { 1.f, 0.f, 0.f };
-	/////////////// COLOR INIT //////////////
+	RenderDeferredObjects();
 
-	/////////////// LIGHT SHADER START //////////////
-	switch (currentPickedShader)
-	{
-	case 0: // Phong Lighting
-	{
-		if (currentPickedProcessor == 0)
-		{
-			PhongLightingShader_CPU.Enable();
-			PhongLightingShader_CPU.SetUniform("modelMatrix", mainObject->GetModelMatrix());
-			PhongLightingShader_CPU.SetUniform("viewMatrix", viewMatrix);
-			PhongLightingShader_CPU.SetUniform("diffuseTexture", 0);
-			PhongLightingShader_CPU.SetUniform("specularTexture", 1);
-			mainObject->Draw();
-			PhongLightingShader_CPU.SetUniform("diffuseTexture", 2);
-			PhongLightingShader_CPU.SetUniform("specularTexture", 2);
-			PhongLightingShader_CPU.SetUniform("modelMatrix", plane->GetModelMatrix());
-			plane->Draw();
-		}
-		else
-		{
-			PhongLightingShader_GPU.Enable();
-			PhongLightingShader_GPU.SetUniform("modelMatrix", mainObject->GetModelMatrix());
-			PhongLightingShader_GPU.SetUniform("viewMatrix", viewMatrix);
-			PhongLightingShader_GPU.SetUniform("diffuseTexture", 0);
-			PhongLightingShader_GPU.SetUniform("specularTexture", 1);
-			PhongLightingShader_GPU.SetUniform("useNormalForUV", currentPickedEntity);
-			PhongLightingShader_GPU.SetUniform("uvType", currentTexProjMode);
-			PhongLightingShader_GPU.SetUniform("center", mainObject->GetCenter());
-			mainObject->Draw();
-			PhongLightingShader_GPU.SetUniform("diffuseTexture", 2);
-			PhongLightingShader_GPU.SetUniform("specularTexture", 2);
-			PhongLightingShader_GPU.SetUniform("modelMatrix", plane->GetModelMatrix());
-			plane->Draw();
-		}
-		SetUniformBuffer();
-		PhongLightingShader_CPU.Disable();
-	}
-	break;
-	case 1: // Phong Shading
-	{
-		/////////////// LIGHT SHADER INIT //////////////
-		if (currentPickedProcessor == 0)
-		{
-			PhongShadingShader_CPU.Enable();
-			/////////////// DRAW MAIN OBJECT //////////////
-			PhongShadingShader_CPU.SetUniform("viewMatrix", viewMatrix);
-			PhongShadingShader_CPU.SetUniform("modelMatrix", mainObject->GetModelMatrix());
+	// Copy depth buffer into default depth buffer
 
-			PhongShadingShader_CPU.SetUniform("diffuseTexture", 0);
-			PhongShadingShader_CPU.SetUniform("specularTexture", 1);
-			mainObject->Draw();
-			/////////////// DRAW MAIN OBJECT //////////////
+	//if(bCopyDepthInfo) Copy_Depth_Info();
 
-			/////////////// DRAW PLANE OBJECT //////////////
-			PhongShadingShader_CPU.SetUniform("diffuseTexture", 2);
-			PhongShadingShader_CPU.SetUniform("specularTexture", 2);
-			PhongShadingShader_CPU.SetUniform("modelMatrix", plane->GetModelMatrix());
-			plane->Draw();
-			/////////////// DRAW PLANE OBJECT //////////////
-		}
-		else
-		{
-			PhongShadingShader_GPU.Enable();
-			/////////////// DRAW MAIN OBJECT //////////////
-			PhongShadingShader_GPU.SetUniform("viewMatrix", viewMatrix);
-			PhongShadingShader_GPU.SetUniform("modelMatrix", mainObject->GetModelMatrix());
-
-			PhongShadingShader_GPU.SetUniform("diffuseTexture", 0);
-			PhongShadingShader_GPU.SetUniform("specularTexture", 1);
-			PhongShadingShader_GPU.SetUniform("useNormalForUV", currentPickedEntity);
-			PhongShadingShader_GPU.SetUniform("uvType", currentTexProjMode);
-			PhongShadingShader_GPU.SetUniform("center", mainObject->GetCenter());
-			mainObject->Draw();
-			/////////////// DRAW MAIN OBJECT //////////////
-
-			/////////////// DRAW PLANE OBJECT //////////////
-			PhongShadingShader_GPU.SetUniform("diffuseTexture", 2);
-			PhongShadingShader_GPU.SetUniform("specularTexture", 2);
-			PhongShadingShader_GPU.SetUniform("modelMatrix", plane->GetModelMatrix());
-			plane->Draw();
-			/////////////// DRAW PLANE OBJECT //////////////
-		}
-		SetUniformBuffer();
-
-
-		PhongShadingShader_CPU.Disable();
-	}
-	break;
-	case 2: // Blinn Shading
-	{
-		/////////////// LIGHT SHADER INIT //////////////
-		if (currentPickedProcessor == 0)
-		{
-			BlinnShadingShader_CPU.Enable();
-			/////////////// DRAW MAIN OBJECT //////////////
-			BlinnShadingShader_CPU.SetUniform("viewMatrix", viewMatrix);
-			BlinnShadingShader_CPU.SetUniform("modelMatrix", mainObject->GetModelMatrix());
-
-			BlinnShadingShader_CPU.SetUniform("diffuseTexture", 0);
-			BlinnShadingShader_CPU.SetUniform("specularTexture", 1);
-			mainObject->Draw();
-			/////////////// DRAW MAIN OBJECT //////////////
-
-			/////////////// DRAW PLANE OBJECT //////////////
-			BlinnShadingShader_CPU.SetUniform("diffuseTexture", 2);
-			BlinnShadingShader_CPU.SetUniform("specularTexture", 2);
-			BlinnShadingShader_CPU.SetUniform("modelMatrix", plane->GetModelMatrix());
-			plane->Draw();
-			/////////////// DRAW PLANE OBJECT //////////////
-		}
-		else
-		{
-			BlinnShadingShader_GPU.Enable();
-			/////////////// DRAW MAIN OBJECT //////////////
-			BlinnShadingShader_GPU.SetUniform("viewMatrix", viewMatrix);
-			BlinnShadingShader_GPU.SetUniform("modelMatrix", mainObject->GetModelMatrix());
-
-			BlinnShadingShader_GPU.SetUniform("diffuseTexture", 0);
-			BlinnShadingShader_GPU.SetUniform("specularTexture", 1);
-			BlinnShadingShader_GPU.SetUniform("useNormalForUV", currentPickedEntity);
-			BlinnShadingShader_GPU.SetUniform("uvType", currentTexProjMode);
-			BlinnShadingShader_GPU.SetUniform("center", mainObject->GetCenter());
-			mainObject->Draw();
-			/////////////// DRAW MAIN OBJECT //////////////
-
-			/////////////// DRAW PLANE OBJECT //////////////
-			BlinnShadingShader_GPU.SetUniform("diffuseTexture", 2);
-			BlinnShadingShader_GPU.SetUniform("specularTexture", 2);
-			BlinnShadingShader_GPU.SetUniform("modelMatrix", plane->GetModelMatrix());
-			plane->Draw();
-			/////////////// DRAW PLANE OBJECT //////////////
-		}
-		SetUniformBuffer();
-		
-		BlinnShadingShader_CPU.Disable();
-	}
-	break;
-	}
-	/////////////// LIGHT SHADER END //////////////
-
-	/////////////// DRAW LIGHT SPHERES //////////////
-	basicShader.Enable();
-	basicShader.SetUniform("viewMatrix", viewMatrix);
-	for (LightSphere* sphere : spheres)
-	{
-		basicShader.SetUniform("inputColor", sphere->diffuse);
-		basicShader.SetUniform("modelMatrix", sphere->GetModelMatrix());
-		sphere->Draw();
-	}
-
-	basicShader.SetUniform("inputColor", otherColor);
-	basicShader.SetUniform("modelMatrix", orbit->GetModelMatrix());
-	orbit->Draw();
-	basicShader.Disable();
-	/////////////// DRAW LIGHT SPHERES //////////////
-
-	/////////////// DRAW ORBIT OF SPHERES //////////////
-
-	/////////////// DRAW NORMAL VECTORS //////////////
-	displayNormalShader.Enable();
-	displayNormalShader.SetUniform("viewMatrix", viewMatrix);
-	displayNormalShader.SetUniform("modelMatrix", mainObject->GetModelMatrix());
-	displayNormalShader.SetUniform("normalLength", normalLength);
-	if (shouldDrawVertexNormal == true)
-	{
-		displayNormalShader.SetUniform("inputColor", vNormalColor);
-		mainObject->DrawVertexNormal();
-	}
-
-	if (shouldDrawFaceNormal == true)
-	{
-		displayNormalShader.Enable();
-		displayNormalShader.SetUniform("inputColor", fNormalColor);
-		mainObject->DrawFaceNormal();
-	}
-	displayNormalShader.Disable();
-	/////////////// DRAW NORMAL VECTORS //////////////
+	RenderDebugObjects();
 }
 
-void Scene1::DrawGUI()
+void Scene::DrawGUI()
 {
 	ImGui::Begin("Control Panel");
 
@@ -389,12 +200,6 @@ void Scene1::DrawGUI()
 			}
 		}
 
-		constexpr std::array PROCESSORS = {
-			"CPU",
-			"GPU",
-		};
-		ImGui::Combo("Texture Projection Processor", &currentPickedProcessor, PROCESSORS.data(), static_cast<int>(PROCESSORS.size()));
-
 		constexpr std::array ENTITY = {
 			"Position",
 			"Normal",
@@ -435,14 +240,8 @@ void Scene1::DrawGUI()
 		ImGui::Unindent();
 	}
 
-	if (ImGui::CollapsingHeader("Shader"))
+	//if (ImGui::CollapsingHeader("Shader"))
 	{
-		constexpr std::array SHADERS = {
-			"Phong Lighting",
-			"Phong Shading",
-			"Blinn Shading",
-		};
-		ImGui::Combo("Pick Shader To Render", &currentPickedShader, SHADERS.data(), static_cast<int>(SHADERS.size()));
 		if (ImGui::Button("Reload Shader"))
 		{
 			this->LoadShaders();
@@ -608,50 +407,25 @@ void Scene1::DrawGUI()
 	ImGui::End();
 }
 
-void Scene1::Reload()
+void Scene::Reload()
 {
 	Clear();
 	Init();
 }
 
-void Scene1::LoadShaders()
+void Scene::LoadShaders()
 {
 	basicShader.Delete();
-	PhongLightingShader_CPU.Delete();
-	PhongShadingShader_CPU.Delete();
-	BlinnShadingShader_CPU.Delete();
-	PhongLightingShader_GPU.Delete();
-	PhongShadingShader_GPU.Delete();
-	BlinnShadingShader_GPU.Delete();
+	PhongShadingShader.Delete();
 	displayNormalShader.Delete();
 
 	basicShader.Init("basicShader",
 		"basicShader.vert",
 		"basicShader.frag");
 
-	PhongLightingShader_CPU.Init("PhongLightingShader_CPU",
-		"PhongLighting.vert",
-		"PhongLighting.frag");
-
-	PhongShadingShader_CPU.Init("PhongShadingShader_CPU",
+	PhongShadingShader.Init("PhongShadingShader_CPU",
 		"PhongShading.vert",
 		"PhongShading.frag");
-
-	BlinnShadingShader_CPU.Init("BlinnShadingShader_CPU",
-		"PhongShading.vert",
-		"BlinnShading.frag");
-
-	PhongLightingShader_GPU.Init("PhongLightingShader_GPU",
-		"PhongLighting_GPU.vert",
-		"PhongLighting.frag");
-
-	PhongShadingShader_GPU.Init("PhongShadingShader_GPU",
-		"PhongShading_GPU.vert",
-		"PhongShading.frag");
-
-	BlinnShadingShader_GPU.Init("BlinnShadingShader_GPU",
-		"PhongShading_GPU.vert",
-		"BlinnShading.frag");
 
 	displayNormalShader.Init("displayNormalShader",
 		"displayNormal.vert",
@@ -659,7 +433,7 @@ void Scene1::LoadShaders()
 		"displayNormal.geom");
 }
 
-void Scene1::SetUniformBuffer()
+void Scene::SetUniformBuffer()
 {
 	// uniform buffer set
 	glBindBuffer(GL_UNIFORM_BUFFER, uniformBlockID);
@@ -684,3 +458,75 @@ void Scene1::SetUniformBuffer()
 	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums + sizeof(glm::vec4) * 6, sizeof(glm::vec2), glm::value_ptr(fog_near_far));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
+
+void Scene::RenderDeferredObjects()
+{
+	glm::vec3 otherColor{ 1.f };
+
+	/////////////// LIGHT SHADER START //////////////
+	PhongShadingShader.Enable();
+	/////////////// DRAW MAIN OBJECT //////////////
+	PhongShadingShader.SetUniform("viewMatrix", viewMatrix);
+	PhongShadingShader.SetUniform("modelMatrix", mainObject->GetModelMatrix());
+
+	PhongShadingShader.SetUniform("diffuseTexture", 0);
+	PhongShadingShader.SetUniform("specularTexture", 1);
+	mainObject->Draw();
+	/////////////// DRAW MAIN OBJECT //////////////
+
+	/////////////// DRAW PLANE OBJECT //////////////
+	PhongShadingShader.SetUniform("diffuseTexture", 2);
+	PhongShadingShader.SetUniform("specularTexture", 2);
+	PhongShadingShader.SetUniform("modelMatrix", plane->GetModelMatrix());
+	plane->Draw();
+
+	SetUniformBuffer();
+	/////////////// LIGHT SHADER END //////////////
+
+	/////////////// DRAW LIGHT SPHERES //////////////
+	basicShader.Enable();
+	basicShader.SetUniform("viewMatrix", viewMatrix);
+	for (LightSphere* sphere : spheres)
+	{
+		basicShader.SetUniform("inputColor", sphere->diffuse);
+		basicShader.SetUniform("modelMatrix", sphere->GetModelMatrix());
+		sphere->Draw();
+	}
+
+	basicShader.SetUniform("inputColor", otherColor);
+	basicShader.SetUniform("modelMatrix", orbit->GetModelMatrix());
+	orbit->Draw();
+	basicShader.Disable();
+	/////////////// DRAW LIGHT SPHERES //////////////
+}
+
+void Scene::RenderDebugObjects()
+{
+	const glm::vec3 fNormalColor{ 0.f, 0.f, 1.f };
+	const glm::vec3 vNormalColor = { 1.f, 0.f, 0.f };
+
+	/////////////// DRAW NORMAL VECTORS //////////////
+	displayNormalShader.Enable();
+	displayNormalShader.SetUniform("viewMatrix", viewMatrix);
+	displayNormalShader.SetUniform("modelMatrix", mainObject->GetModelMatrix());
+	displayNormalShader.SetUniform("normalLength", normalLength);
+	if (shouldDrawVertexNormal == true)
+	{
+		displayNormalShader.SetUniform("inputColor", vNormalColor);
+		mainObject->DrawVertexNormal();
+	}
+
+	if (shouldDrawFaceNormal == true)
+	{
+		displayNormalShader.Enable();
+		displayNormalShader.SetUniform("inputColor", fNormalColor);
+		mainObject->DrawFaceNormal();
+	}
+	displayNormalShader.Disable();
+	/////////////// DRAW NORMAL VECTORS //////////////
+}
+
+void Scene::UpdateCamA() { cameraPosition.x -= 0.5; }
+void Scene::UpdateCamS() { cameraPosition.y -= 0.5; }
+void Scene::UpdateCamD() { cameraPosition.x += 0.5; }
+void Scene::UpdateCamW() { cameraPosition.y += 0.5; }
