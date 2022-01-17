@@ -14,6 +14,7 @@ End Header --------------------------------------------------------*/
 #include "ObjectConverter.h"
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include "Mesh.h"
 
 Mesh* CreateObjectFromFile(const std::filesystem::path& filepath, bool useNomral, bool useTexture, Mesh::UVType type, bool useNormalForTexture)

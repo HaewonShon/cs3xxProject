@@ -15,6 +15,7 @@ End Header --------------------------------------------------------*/
 #include <glew.h>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 
 Texture::Texture(std::filesystem::path const& filepath)
 {

@@ -24,10 +24,7 @@ End Header --------------------------------------------------------*/
 
 void Scene::Init()
 {
-	/////////////// SHADER //////////////
 	LoadShaders();
-
-	/////////////// SHADER //////////////
 
 	/////////////// MAIN OBJECT //////////////
 	// main object in the center
@@ -86,13 +83,16 @@ void Scene::Init()
 	glBindTexture(GL_TEXTURE_2D, specularTexture.textureID);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, whiteTexture.textureID);
+
+	// camera initial lookat to origin
+
 };
 
 void Scene::Update(float dt)
 {
 	viewMatrix = glm::perspective(45.f, 1280.f / 720.f, 0.1f, 10.f)
-		* glm::lookAt(cameraPosition,
-			glm::vec3(0.f),
+		* glm::lookAt(cam.pos,
+			cam.pos + cam.lookAt,
 			glm::vec3(0.f, 1.f, 0.f));
 
 	if (!isLightsRotate)
@@ -222,8 +222,6 @@ void Scene::DrawGUI()
 
 	if (ImGui::CollapsingHeader("Scene control"))
 	{
-		ImGui::DragFloat3("Camera Position", &cameraPosition.x, 0.1f, -10.f, 10.f);
-		ImGui::Separator();
 		if (ImGui::Button("Reload Scene"))
 		{
 			this->Reload();
@@ -450,7 +448,7 @@ void Scene::SetUniformBuffer()
 		glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * i + sizeof(glm::vec4) * 4, sizeof(glm::vec3), glm::value_ptr(spheres[i]->GetPosition()));
 	}
 	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums, sizeof(int), &sphereNums);
-	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums + sizeof(glm::vec4), sizeof(glm::vec3), glm::value_ptr(cameraPosition));
+	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums + sizeof(glm::vec4), sizeof(glm::vec3), glm::value_ptr(cam.pos));
 	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums + sizeof(glm::vec4) * 2, sizeof(glm::vec3), glm::value_ptr(ambientCo));
 	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums + sizeof(glm::vec4) * 3, sizeof(glm::vec3), glm::value_ptr(globalAmbient));
 	glBufferSubData(GL_UNIFORM_BUFFER, uniformStructSize * maxSphereNums + sizeof(glm::vec4) * 4, sizeof(glm::vec3), glm::value_ptr(attenuation));
@@ -471,14 +469,14 @@ void Scene::RenderDeferredObjects()
 
 	PhongShadingShader.SetUniform("diffuseTexture", 0);
 	PhongShadingShader.SetUniform("specularTexture", 1);
-	mainObject->Draw();
+	//mainObject->Draw();
 	/////////////// DRAW MAIN OBJECT //////////////
 
 	/////////////// DRAW PLANE OBJECT //////////////
 	PhongShadingShader.SetUniform("diffuseTexture", 2);
 	PhongShadingShader.SetUniform("specularTexture", 2);
 	PhongShadingShader.SetUniform("modelMatrix", plane->GetModelMatrix());
-	plane->Draw();
+	//plane->Draw();
 
 	SetUniformBuffer();
 	/////////////// LIGHT SHADER END //////////////
@@ -486,6 +484,7 @@ void Scene::RenderDeferredObjects()
 	/////////////// DRAW LIGHT SPHERES //////////////
 	basicShader.Enable();
 	basicShader.SetUniform("viewMatrix", viewMatrix);
+	model.Draw(basicShader);
 	for (LightSphere* sphere : spheres)
 	{
 		basicShader.SetUniform("inputColor", sphere->diffuse);
@@ -526,7 +525,37 @@ void Scene::RenderDebugObjects()
 	/////////////// DRAW NORMAL VECTORS //////////////
 }
 
-void Scene::UpdateCamA() { cameraPosition.x -= 0.5; }
-void Scene::UpdateCamS() { cameraPosition.y -= 0.5; }
-void Scene::UpdateCamD() { cameraPosition.x += 0.5; }
-void Scene::UpdateCamW() { cameraPosition.y += 0.5; }
+void Scene::UpdateCamA(float dt) 
+{
+	cam.pos -= glm::cross(cam.lookAt, glm::vec3(0.f, 1.f, 0.f)) * cam.moveSpeed * dt; 
+}
+
+void Scene::UpdateCamS(float dt) 
+{
+	cam.pos -= cam.lookAt * cam.moveSpeed * dt;
+}
+
+void Scene::UpdateCamD(float dt) 
+{ 
+	cam.pos += glm::cross(cam.lookAt, glm::vec3(0.f, 1.f, 0.f)) * cam.moveSpeed * dt;
+}
+
+void Scene::UpdateCamW(float dt) 
+{ 
+	cam.pos += cam.lookAt * cam.moveSpeed * dt;
+}
+
+void Scene::UpdateCamRotation(int xDiff, int yDiff)
+{
+	cam.theta += xDiff * cam.rotSpeed;
+	cam.pi -= yDiff * cam.rotSpeed;
+
+	if (cam.theta > 360.f) cam.theta -= 360.f;
+	if (cam.theta < 0.f) cam.theta += 360.f;
+	if (cam.pi > 89.f) cam.pi = 89.f;
+	if (cam.pi < -89.f) cam.pi = -89.f;
+
+	cam.lookAt.x = glm::cos(glm::radians(cam.theta));
+	cam.lookAt.y = glm::sin(glm::radians(cam.pi));
+	cam.lookAt.z = glm::sin(glm::radians(cam.theta));
+}

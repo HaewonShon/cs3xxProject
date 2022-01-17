@@ -14,11 +14,22 @@ End Header --------------------------------------------------------*/
 #pragma once
 #include "Shader.h"
 #include "Texture.h"
+#include "AssimpModel.h"
 #include <glm/gtc/constants.hpp>
 #include <glm/vec2.hpp>
 
 class Mesh;
 class LightSphere;
+
+struct Camera
+{
+	glm::vec3 pos{ 0.f, 2.5f, 5.f };
+	glm::vec3 lookAt{0.f, -2.5f, -5.f};
+	float theta = 270.f;
+	float pi = -26.5f;
+	float moveSpeed = 2.f;
+	float rotSpeed = 180.f / 1280.f; // 180 degree for 1280 pixels
+};
 
 class Scene
 {
@@ -31,10 +42,11 @@ public:
 	void Reload();
 	void LoadShaders();
 
-	void UpdateCamA();
-	void UpdateCamS();
-	void UpdateCamD();
-	void UpdateCamW();
+	void UpdateCamA(float dt);
+	void UpdateCamS(float dt);
+	void UpdateCamD(float dt);
+	void UpdateCamW(float dt);
+	void UpdateCamRotation(int xDiff, int yDiff);
 private:
 	void SetUniformBuffer();
 
@@ -47,6 +59,8 @@ private:
 
 	std::vector<Mesh*> meshContainer;
 
+	AssimpModel model{ "..\\Models\\Survival_BackPack_2\\Survival_BackPack_2.fbx" };
+
 	// scene info
 	Mesh* mainObject;
 	Mesh* plane;
@@ -55,8 +69,7 @@ private:
 	glm::mat4 viewMatrix;
 
 	// scene control
-	glm::vec3 cameraPosition{ 0.f, 2.5f, 5.f };
-	glm::vec3 cameraLookAt{};
+	Camera cam;
 	bool isLightsRotate{ true };
 	// global variables
 	glm::vec3 globalAmbient{ 0.f };

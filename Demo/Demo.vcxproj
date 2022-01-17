@@ -99,12 +99,13 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib;assimp.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;$(SolutionDir)External\assimp\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)External\glew\$(Platform)\Library\*.dll" "$(TargetDir)"
 xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
+xcopy /y /d "$(SolutionDir)External\assimp\$(Configuration)\*.dll" "$(TargetDir)"
 
 </Command>
     </PostBuildEvent>
@@ -126,12 +127,13 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib;assimp.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;$(SolutionDir)External\assimp\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)External\glew\$(Platform)\Library\*.dll" "$(TargetDir)"
 xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
+xcopy /y /d "$(SolutionDir)External\assimp\$(Configuration)\*.dll" "$(TargetDir)"
 
 </Command>
     </PostBuildEvent>
@@ -149,12 +151,13 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib;assimp.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;$(SolutionDir)External\assimp\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)External\glew\$(Platform)\Library\*.dll" "$(TargetDir)"
 xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
+xcopy /y /d "$(SolutionDir)External\assimp\$(Configuration)\*.dll" "$(TargetDir)"
 
 </Command>
     </PostBuildEvent>
@@ -176,12 +179,13 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;SDL2.lib;SDL2main.lib;assimp.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)External\SDL2\lib\$(Platform);$(SolutionDir)External\glew\$(Platform)\Library;$(SolutionDir)External\assimp\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)External\glew\$(Platform)\Library\*.dll" "$(TargetDir)"
 xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
+xcopy /y /d "$(SolutionDir)External\assimp\$(Configuration)\*.dll" "$(TargetDir)"
 
 </Command>
     </PostBuildEvent>
@@ -193,6 +197,8 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
     <ClCompile Include="..\External\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\External\imgui\imgui_impl_sdl.cpp" />
     <ClCompile Include="..\External\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="AssimpMesh.cpp" />
+    <ClCompile Include="AssimpModel.cpp" />
     <ClCompile Include="Demo.cpp" />
     <ClCompile Include="LightSphere.cpp" />
     <ClCompile Include="main.cpp" />
@@ -211,6 +217,8 @@ xcopy /y /d "$(SolutionDir)External\SDL2\lib\$(Platform)\*.dll" "$(TargetDir)"
     <ClInclude Include="..\External\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\External\imgui\imstb_textedit.h" />
     <ClInclude Include="..\External\imgui\imstb_truetype.h" />
+    <ClInclude Include="AssimpMesh.h" />
+    <ClInclude Include="AssimpModel.h" />
     <ClInclude Include="Demo.h" />
     <ClInclude Include="LightSphere.h" />
     <ClInclude Include="Mesh.h" />

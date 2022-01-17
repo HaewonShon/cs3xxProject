@@ -17,7 +17,6 @@ End Header --------------------------------------------------------*/
 #include "Scene.h"
 
 struct SDL_Window;
-
 class Demo
 {
 public:
@@ -35,6 +34,9 @@ private:
 	bool isRunning{false};
 
 	uint32_t timestamp;
+	int mouseX{}; 
+	int mouseY{};
+	bool isMouseDown = false;
 
 	std::unique_ptr<Scene> currentLevel;
 };

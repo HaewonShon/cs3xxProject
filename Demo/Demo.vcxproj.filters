@@ -29,6 +29,8 @@
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="LightSphere.cpp" />
     <ClCompile Include="Texture.cpp" />
+    <ClCompile Include="AssimpModel.cpp" />
+    <ClCompile Include="AssimpMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Demo.h" />
@@ -64,6 +66,8 @@
     <ClInclude Include="Shader.h" />
     <ClInclude Include="LightSphere.h" />
     <ClInclude Include="Texture.h" />
+    <ClInclude Include="AssimpModel.h" />
+    <ClInclude Include="AssimpMesh.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Levels">

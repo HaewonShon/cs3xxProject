@@ -68,6 +68,10 @@ void Demo::Init()
 
 void Demo::Update() noexcept
 {
+    uint32_t now = SDL_GetTicks();
+    float dt = (float)(now - timestamp) / 1000.f;
+    timestamp = now;
+
     SDL_Event event{ 0 };
     while (SDL_PollEvent(&event) != 0)
     {
@@ -80,25 +84,38 @@ void Demo::Update() noexcept
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_A:
-                currentLevel->UpdateCamA();
+                currentLevel->UpdateCamA(dt);
                 break;
             case SDL_SCANCODE_S:
-                currentLevel->UpdateCamS();
+                currentLevel->UpdateCamS(dt);
                 break;
             case SDL_SCANCODE_D:
-                currentLevel->UpdateCamD();
+                currentLevel->UpdateCamD(dt);
                 break;
             case SDL_SCANCODE_W:
-                currentLevel->UpdateCamW();
+                currentLevel->UpdateCamW(dt);
                 break;
             }
             break;
+        case SDL_MOUSEBUTTONDOWN:
+            isMouseDown = true;
+            break;
+        case SDL_MOUSEBUTTONUP:
+            isMouseDown = false;
+            break;
+        case SDL_MOUSEMOTION:
+            if (isMouseDown == true)
+            {
+                currentLevel->UpdateCamRotation(event.button.x - mouseX, event.button.y - mouseY);
+            }
+
+            mouseX = event.button.x;
+            mouseY = event.button.y;
+            std::string windowName = "CS350 Graphics Demo (" + std::to_string(mouseX) + ", " + std::to_string(mouseY) + ")";
+            SDL_SetWindowTitle(window, windowName.c_str());
+            break;
         }
     }
-
-    uint32_t now = SDL_GetTicks();
-    float dt = (float)(now - timestamp) / 1000.f;
-    timestamp = now;
 
     currentLevel->Update(dt);
 }

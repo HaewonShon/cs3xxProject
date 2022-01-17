@@ -19,6 +19,7 @@ End Header --------------------------------------------------------*/
 struct Texture
 {
 	Texture(std::filesystem::path const& filepath);
+	Texture(std::filesystem::path const& directory, std::string filename);
 	~Texture();
 	void ReadFile(std::filesystem::path const& filepath);
 	GLuint textureID;
