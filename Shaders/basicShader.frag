@@ -18,5 +18,5 @@ uniform vec3 inputColor;
 
 void main()
 {
-   color = vec4(inputColor, 1.0);
+   color = vec4(inputColor, 1.0); //vec4(uvs, 0.0, 1.0);
 }

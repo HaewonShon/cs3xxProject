@@ -16,6 +16,7 @@ layout(lines) in;
 layout(line_strip, max_vertices = 2) out;
 
 uniform mat4 viewMatrix;
+uniform mat4 projMatrix;
 uniform float normalLength;
 
 void main()
@@ -23,9 +24,9 @@ void main()
    vec4 center = gl_in[0].gl_Position;
    vec4 normal = gl_in[1].gl_Position - gl_in[0].gl_Position;
 
-   gl_Position = viewMatrix * center;
+   gl_Position = projMatrix * viewMatrix * center;
    EmitVertex();
-   gl_Position = viewMatrix * (center + normal * normalLength);
+   gl_Position = projMatrix * viewMatrix * (center + normal * 0.1);
    EmitVertex();
 
    EndPrimitive();

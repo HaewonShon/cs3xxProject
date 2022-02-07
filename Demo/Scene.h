@@ -24,7 +24,7 @@ class LightSphere;
 struct Camera
 {
 	glm::vec3 pos{ 0.f, 2.5f, 5.f };
-	glm::vec3 lookAt{0.f, -2.5f, -5.f};
+	glm::vec3 lookAt{ 0.f, -2.5f, -5.f };
 	float theta = 270.f;
 	float pi = -26.5f;
 	float moveSpeed = 2.f;
@@ -53,20 +53,24 @@ private:
 	void RenderDeferredObjects();
 	void RenderDebugObjects();
 
+	void SetupGBuffer();
+	void CopyDepthInfo();
+
 	Shader basicShader;
 	Shader PhongShadingShader;
 	Shader displayNormalShader;
+	Shader gBufferShader;
+	Shader FSQShader;
 
-	std::vector<Mesh*> meshContainer;
 
-	AssimpModel model{ "..\\Models\\Survival_BackPack_2\\Survival_BackPack_2.fbx" };
+	std::vector<AssimpModel*> models;
+	std::vector<Mesh*> debugObjects;
+	Mesh* FSQ;
+	Mesh* plane;
 
 	// scene info
-	Mesh* mainObject;
-	Mesh* plane;
-	Mesh* testCube;
-	Mesh* orbit;
 	glm::mat4 viewMatrix;
+	glm::mat4 projMatrix;
 
 	// scene control
 	Camera cam;
@@ -94,20 +98,27 @@ private:
 	float objectScale{ 1.f };
 	glm::vec3 objectRotation{ 0.f };
 	glm::vec3 ambientCo{ 1.f };
-	bool shouldDrawFaceNormal{ false };
-	bool shouldDrawVertexNormal{ false };
-	float normalLength{ 0.1f };
 
-	Texture diffuseTexture{"..\\Textures\\metal_roof_diff_512x512.ppm"};
+	Texture diffuseTexture{ "..\\Textures\\metal_roof_diff_512x512.ppm" };
 	Texture specularTexture{ "..\\Textures\\metal_roof_spec_512x512.ppm" };
 	Texture whiteTexture{ "..\\Textures\\white.ppm" };
 
-	// shader
-	int currentPickedShader{ 0 };
-
 	// uniform block
-	GLuint phongShadingIndex;
+	GLuint FSQUniformIndex;
 
 	GLuint uniformBlockID;
 	const size_t uniformStructSize = 80;
+
+	// cs350 assignment 1 - deferred rendering
+	GLuint gBuffer;
+	GLuint gPosition, gNormal, gAlbedoSpec, gDepth;
+	GLuint depth;
+
+	// GUI info
+	bool isDrawingBuffer{ false };
+	bool isCopyingDepth{ true };
+	int bufferRenderTarget{ 0 };
+	bool shouldDrawFaceNormal{ false };
+	bool shouldDrawVertexNormal{ false };
+	float normalLength{ 0.1f };
 };

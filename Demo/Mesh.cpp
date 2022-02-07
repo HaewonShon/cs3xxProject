@@ -64,7 +64,7 @@ void Mesh::Build(bool useNormal, bool useTexture, UVType type, bool useNormalFor
 
 	if (useTexture == true)
 	{
-		CalcUVs(type, useNormalForTexture);
+		//CalcUVs(type, useNormalForTexture);
 	}
 	if (useNormal == true)
 	{

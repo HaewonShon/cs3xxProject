@@ -22,53 +22,49 @@ End Header --------------------------------------------------------*/
 #include "LightSphere.h"
 #include "ObjectConverter.h"
 
+int const WIDTH = 1280;
+int const HEIGHT = 720;
+
 void Scene::Init()
 {
 	LoadShaders();
 
-	/////////////// MAIN OBJECT //////////////
-	// main object in the center
-	mainObject = CreateObjectFromFile("..\\Models\\bunny.obj", true, true, static_cast<Mesh::UVType>(currentTexProjMode), currentPickedEntity == 0 ? false : true);
-	meshContainer.push_back(mainObject);
+	models.push_back(new AssimpModel("..\\Models\\backpack\\backpack.obj"));
 
-	/////////////// MAIN OBJECT //////////////
+	// FSQ model 
+	FSQ = new Mesh();
+	FSQ->AddVertex({ 1.f, 1.f, 0.f });
+	FSQ->AddVertex({ -1.f, 1.f, 0.f });
+	FSQ->AddVertex({ -1.f, -1.f, 0.f });
+	FSQ->AddVertex({ 1.f, -1.f, 0.f });
+	FSQ->AddTextureCoord({ 1.f, 1.f });
+	FSQ->AddTextureCoord({ 0.f, 1.f });
+	FSQ->AddTextureCoord({ 0.f, 0.f });
+	FSQ->AddTextureCoord({ 1.f, 0.f });
+	FSQ->AddIndex(0);
+	FSQ->AddIndex(1);
+	FSQ->AddIndex(2);
+	FSQ->AddIndex(0);
+	FSQ->AddIndex(2);
+	FSQ->AddIndex(3);
+	FSQ->SetPrimitiveType(GL_TRIANGLES);
+	FSQ->Build(true, true, Mesh::UVType::PLANER, true);//false, true);
 
-	/////////////// PLANE //////////////
-	plane = CreateObjectFromFile("..\\Models\\quad.obj", true);
+	plane = new Mesh(*FSQ);
 	plane->SetPosition({ 0.f, -1.f, 0.f });
 	plane->SetRotation({ -glm::half_pi<float>(), 0.f, 0.f });
-	plane->SetScale({ 5.f, 5.f, 1.f });
-	meshContainer.push_back(plane);
-
-	/////////////// PLANE //////////////
+	plane->SetScale({5.f, 5.f, 1.f});
 
 	/////////////// LIGHT SPHERES //////////////
 	spheres.push_back(new LightSphere(orbitRadius, sphereSize, false));
-	meshContainer.push_back(spheres[0]);
 	/////////////// LIGHT SPHERES //////////////
-
-	/////////////// ORBIT //////////////
-	orbit = new Mesh();
-	float const angleDiff = glm::two_pi<float>() / orbitVertexCount;
-	int i = 0;
-	for (float angle = 0.f; angle < glm::two_pi<float>(); angle += angleDiff, ++i)
-	{
-		orbit->AddVertex({ orbitRadius * std::cos(angle), 0.f, orbitRadius * std::sin(angle) });
-		orbit->AddIndex(i);
-		orbit->AddIndex((i + 1) % orbitVertexCount);
-	}
-
-	orbit->SetPrimitiveType(GL_LINES);
-	orbit->Build();
-	meshContainer.push_back(orbit);
-	/////////////// ORBIT //////////////
 
 	/////////////// IMGUI INIT //////////////
 	currentPickedObject = 0;
 
 	/////////////// UNIFORM BLOCK SETUP //////////////
-	phongShadingIndex = glGetUniformBlockIndex(PhongShadingShader.GetID(), "LightInfo");
-	glUniformBlockBinding(PhongShadingShader.GetID(), phongShadingIndex, 0);
+	FSQUniformIndex = glGetUniformBlockIndex(FSQShader.GetID(), "LightInfo");
+	glUniformBlockBinding(FSQShader.GetID(), FSQUniformIndex, 0);
 
 	glGenBuffers(1, &uniformBlockID);
 	glBindBuffer(GL_UNIFORM_BUFFER, uniformBlockID);
@@ -76,22 +72,13 @@ void Scene::Init()
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, uniformBlockID, 0, uniformStructSize * maxSphereNums + 16 * 6 + 8);
 
-	/////////////// TEXTURE SETUP //////////////
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, diffuseTexture.textureID);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, specularTexture.textureID);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, whiteTexture.textureID);
-
-	// camera initial lookat to origin
-
+	SetupGBuffer();
+	projMatrix = glm::perspective(45.f, 1280.f / 720.f, 0.1f, 10.f);
 };
 
 void Scene::Update(float dt)
 {
-	viewMatrix = glm::perspective(45.f, 1280.f / 720.f, 0.1f, 10.f)
-		* glm::lookAt(cam.pos,
+	viewMatrix = glm::lookAt(cam.pos,
 			cam.pos + cam.lookAt,
 			glm::vec3(0.f, 1.f, 0.f));
 
@@ -107,14 +94,33 @@ void Scene::Update(float dt)
 
 void Scene::Clear()
 {
-	for (Mesh* mesh : meshContainer)
+	for (Mesh* mesh : debugObjects)
 	{
 		if (mesh)
 		{
 			delete mesh;
 		}
 	}
-	meshContainer.clear();
+	debugObjects.clear();
+	for (AssimpModel* mesh : models)
+	{
+		if (mesh)
+		{
+			delete mesh;
+		}
+	}
+	models.clear();
+	if(FSQ) delete FSQ;
+	FSQ = nullptr;
+	if(plane) delete plane;
+	plane = nullptr;
+	for (LightSphere* sphere : spheres)
+	{
+		if (sphere)
+		{
+			delete sphere;
+		}
+	}
 	spheres.clear();
 
 	glDeleteBuffers(1, &uniformBlockID);
@@ -133,8 +139,10 @@ void Scene::Draw()
 	RenderDeferredObjects();
 
 	// Copy depth buffer into default depth buffer
-
-	//if(bCopyDepthInfo) Copy_Depth_Info();
+	if (isCopyingDepth)
+	{
+		CopyDepthInfo();
+	}
 
 	RenderDebugObjects();
 }
@@ -145,6 +153,7 @@ void Scene::DrawGUI()
 
 	if (ImGui::CollapsingHeader("Object"))
 	{
+		ImGui::Indent();
 		constexpr std::array OBJECTS = {
 			"..\\Models\\4Sphere.obj",
 			"..\\Models\\bunny.obj",
@@ -162,71 +171,19 @@ void Scene::DrawGUI()
 		};
 		if (ImGui::Combo("Pick model to render", &currentPickedObject, OBJECTS.data(), static_cast<int>(OBJECTS.size())))
 		{
-			delete mainObject;
-			mainObject = CreateObjectFromFile(OBJECTS[currentPickedObject], true, true, static_cast<Mesh::UVType>(currentTexProjMode), currentPickedEntity == 0 ? false : true);
+			//delete mainObject;
+			//mainObject = CreateObjectFromFile(OBJECTS[currentPickedObject], true, true, static_cast<Mesh::UVType>(currentTexProjMode), currentPickedEntity == 0 ? false : true);
 		}
-
-		ImGui::Separator();
-		if (ImGui::DragFloat("Object Scale", &objectScale, 0.01f, 0.1f, 5.f))
-		{
-			mainObject->SetScale(glm::vec3{ objectScale });
-		}
-		const float ROTATION_ANGLE_LIMIT = glm::pi<float>();
-		if (ImGui::DragFloat3("Object Rotation", &objectRotation.x, 0.01f, -ROTATION_ANGLE_LIMIT, ROTATION_ANGLE_LIMIT))
-		{
-			mainObject->SetRotation(objectRotation);
-		}
-
-		ImGui::Separator();
-
-		constexpr std::array TEXTURE_PROJECTION_MODE = {
-			"Planer",
-			"Spherical",
-			"Cylindrical",
-		};
-		if (ImGui::Combo("Texture Projection Mode", &currentTexProjMode, TEXTURE_PROJECTION_MODE.data(), static_cast<int>(TEXTURE_PROJECTION_MODE.size())))
-		{
-			switch (currentTexProjMode)
-			{
-			case 0:
-				mainObject->RebuildUVs(Mesh::UVType::PLANER, currentPickedEntity == 0 ? false : true);
-				break;
-			case 1:
-				mainObject->RebuildUVs(Mesh::UVType::SPHERICAL, currentPickedEntity == 0 ? false : true);
-				break;
-			case 2:
-				mainObject->RebuildUVs(Mesh::UVType::CYLINDRICAL, currentPickedEntity == 0 ? false : true);
-				break;
-			}
-		}
-
-		constexpr std::array ENTITY = {
-			"Position",
-			"Normal",
-		};
-		if(ImGui::Combo("Texture Projection Entity", &currentPickedEntity, ENTITY.data(), static_cast<int>(ENTITY.size())))\
-		{
-			mainObject->RebuildUVs(static_cast<Mesh::UVType>(currentTexProjMode), currentPickedEntity == 0 ? false : true);
-		}
-
-		ImGui::Separator();
-
-		ImGui::Checkbox("Draw face normals", &shouldDrawFaceNormal);
-		ImGui::Checkbox("Draw vertex normals", &shouldDrawVertexNormal);
-
-		if (shouldDrawFaceNormal || shouldDrawVertexNormal)
-		{
-			ImGui::DragFloat("Normal Length", &normalLength, 0.01f, 0.01f, 1.f);
-		}
+		ImGui::Unindent();
 	}
 
 	if (ImGui::CollapsingHeader("Scene control"))
 	{
+		ImGui::Indent();
 		if (ImGui::Button("Reload Scene"))
 		{
 			this->Reload();
 		}
-		ImGui::Indent();
 		if (ImGui::CollapsingHeader("Global Variables"))
 		{
 			ImGui::ColorEdit3("ambient Coefficient", glm::value_ptr(ambientCo), 0);
@@ -238,16 +195,9 @@ void Scene::DrawGUI()
 		ImGui::Unindent();
 	}
 
-	//if (ImGui::CollapsingHeader("Shader"))
-	{
-		if (ImGui::Button("Reload Shader"))
-		{
-			this->LoadShaders();
-		}
-	}
-
 	if (ImGui::CollapsingHeader("Lights"))
 	{
+		ImGui::Indent();
 		ImGui::Checkbox("Light Rotation", &isLightsRotate);
 
 		constexpr std::array LIGHTS = {
@@ -306,11 +256,16 @@ void Scene::DrawGUI()
 			{
 				++sphereNums;
 				spheres.push_back(new LightSphere(orbitRadius, sphereSize, false));
-				meshContainer.push_back(spheres.back());
 			}
 		}
+		ImGui::Unindent();
 	}
 
+	if (ImGui::Button("Reload Shader"))
+	{
+		this->LoadShaders();
+	}
+	/*
 	if (ImGui::CollapsingHeader("Scenarios"))
 	{
 		if (ImGui::Button("1st Scenario"))
@@ -331,9 +286,9 @@ void Scene::DrawGUI()
 			std::cout << "Light type : ";
 			switch (lightType)
 			{
-				case LightSphere::LightType::POINT: std::cout << "Point" << std::endl; break;
-				case LightSphere::LightType::DIRECTIONAL: std::cout << "Directional" << std::endl; break;
-				case LightSphere::LightType::SPOT: std::cout << "Spot Light" << std::endl; break;
+			case LightSphere::LightType::POINT: std::cout << "Point" << std::endl; break;
+			case LightSphere::LightType::DIRECTIONAL: std::cout << "Directional" << std::endl; break;
+			case LightSphere::LightType::SPOT: std::cout << "Spot Light" << std::endl; break;
 			}
 
 			int angleOffset = 0;
@@ -361,9 +316,9 @@ void Scene::DrawGUI()
 			int angleOffset = 0;
 			for (LightSphere* light : spheres)
 			{
-				light->ambient = glm::vec3{ (rand() % 256) / 255.f, (rand() % 256) / 255.f, (rand() % 256) / 255.f } * 0.05f;
-				light->diffuse = glm::vec3{ (rand() % 256) / 255.f, (rand() % 256) / 255.f, (rand() % 256) / 255.f } * 0.1f;
-				light->specular = glm::vec3{ (rand() % 256) / 255.f, (rand() % 256) / 255.f, (rand() % 256) / 255.f } * 0.1f;
+				light->ambient = glm::vec3{ (rand() % 256) / 255.f, (rand() % 256) / 255.f, (rand() % 256) / 255.f } *0.05f;
+				light->diffuse = glm::vec3{ (rand() % 256) / 255.f, (rand() % 256) / 255.f, (rand() % 256) / 255.f } *0.1f;
+				light->specular = glm::vec3{ (rand() % 256) / 255.f, (rand() % 256) / 255.f, (rand() % 256) / 255.f } *0.1f;
 				light->lType = lightType;
 				light->angleOffset = 45.f * angleOffset++;
 			}
@@ -401,7 +356,26 @@ void Scene::DrawGUI()
 
 		}
 	}
+	*/
 
+	//if (ImGui::CollapsingHeader("Deferred Shading"))
+	{
+		ImGui::Checkbox("Draw FBO", &isDrawingBuffer);
+		if(isDrawingBuffer == true)
+		{
+			constexpr std::array RENDER_TARGETS = {
+				"Position",
+				"Normal",
+				"Diffuse",
+				"Depth"
+			};
+			ImGui::Combo("Pick model to render", &bufferRenderTarget, RENDER_TARGETS.data(), static_cast<int>(RENDER_TARGETS.size()));
+		}
+		ImGui::Checkbox("Depth Copy", &isCopyingDepth);
+		ImGui::Separator();
+		ImGui::Checkbox("Draw Face Normal", &shouldDrawFaceNormal);
+		ImGui::Checkbox("Draw Vertex Normal", &shouldDrawVertexNormal);
+	}
 	ImGui::End();
 }
 
@@ -416,12 +390,14 @@ void Scene::LoadShaders()
 	basicShader.Delete();
 	PhongShadingShader.Delete();
 	displayNormalShader.Delete();
+	gBufferShader.Delete();
+	FSQShader.Delete();
 
 	basicShader.Init("basicShader",
 		"basicShader.vert",
 		"basicShader.frag");
 
-	PhongShadingShader.Init("PhongShadingShader_CPU",
+	PhongShadingShader.Init("PhongShadingShader",
 		"PhongShading.vert",
 		"PhongShading.frag");
 
@@ -429,6 +405,9 @@ void Scene::LoadShaders()
 		"displayNormal.vert",
 		"basicShader.frag",
 		"displayNormal.geom");
+
+	gBufferShader.Init("gBufferShader", "gBuffer.vert", "gBuffer.frag");
+	FSQShader.Init("FSQ", "FSQ.vert", "FSQ.frag");
 }
 
 void Scene::SetUniformBuffer()
@@ -459,89 +438,115 @@ void Scene::SetUniformBuffer()
 
 void Scene::RenderDeferredObjects()
 {
-	glm::vec3 otherColor{ 1.f };
+	// geometry pass
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+	glClearColor(0.f, 0.f, 0.f, 1.f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	gBufferShader.Enable();
+	gBufferShader.SetUniform("modelMatrix", glm::mat4(1.f));
+	gBufferShader.SetUniform("viewMatrix", viewMatrix);
+	gBufferShader.SetUniform("projMatrix", projMatrix);
 
-	/////////////// LIGHT SHADER START //////////////
-	PhongShadingShader.Enable();
-	/////////////// DRAW MAIN OBJECT //////////////
-	PhongShadingShader.SetUniform("viewMatrix", viewMatrix);
-	PhongShadingShader.SetUniform("modelMatrix", mainObject->GetModelMatrix());
+	glBindTexture(GL_TEXTURE_2D, diffuseTexture.textureID);
+	FSQShader.SetUniform("texture_diffuse", 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, specularTexture.textureID);
+	FSQShader.SetUniform("texture_specular", 1);
+	models[0]->Draw(gBufferShader);
 
-	PhongShadingShader.SetUniform("diffuseTexture", 0);
-	PhongShadingShader.SetUniform("specularTexture", 1);
-	//mainObject->Draw();
-	/////////////// DRAW MAIN OBJECT //////////////
+	// plane
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, whiteTexture.textureID);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, whiteTexture.textureID);
+	gBufferShader.SetUniform("modelMatrix", plane->GetModelMatrix());
+	plane->Draw();
 
-	/////////////// DRAW PLANE OBJECT //////////////
-	PhongShadingShader.SetUniform("diffuseTexture", 2);
-	PhongShadingShader.SetUniform("specularTexture", 2);
-	PhongShadingShader.SetUniform("modelMatrix", plane->GetModelMatrix());
-	//plane->Draw();
+	gBufferShader.Disable();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glClearColor(fog.x, fog.y, fog.z, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	FSQShader.Enable(); 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
+	FSQShader.SetUniform("gPosition", 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
+	FSQShader.SetUniform("gNormal", 1);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	FSQShader.SetUniform("gAlbedoSpec", 2);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, gDepth);
+	FSQShader.SetUniform("gDepth", 3);
+	FSQShader.SetUniform("viewMatrix", viewMatrix);
+	FSQShader.SetUniform("isDrawingBuffer", isDrawingBuffer);
+	FSQShader.SetUniform("bufferRenderTarget", bufferRenderTarget);
 
 	SetUniformBuffer();
-	/////////////// LIGHT SHADER END //////////////
 
-	/////////////// DRAW LIGHT SPHERES //////////////
-	basicShader.Enable();
-	basicShader.SetUniform("viewMatrix", viewMatrix);
-	model.Draw(basicShader);
-	for (LightSphere* sphere : spheres)
-	{
-		basicShader.SetUniform("inputColor", sphere->diffuse);
-		basicShader.SetUniform("modelMatrix", sphere->GetModelMatrix());
-		sphere->Draw();
-	}
-
-	basicShader.SetUniform("inputColor", otherColor);
-	basicShader.SetUniform("modelMatrix", orbit->GetModelMatrix());
-	orbit->Draw();
-	basicShader.Disable();
-	/////////////// DRAW LIGHT SPHERES //////////////
+	FSQ->Draw();
+	FSQShader.Disable();
 }
 
 void Scene::RenderDebugObjects()
 {
+	basicShader.Enable();
+	basicShader.SetUniform("viewMatrix", viewMatrix);
+	basicShader.SetUniform("projMatrix", projMatrix);
+
+	// draw lights
+	for (LightSphere* light : spheres)
+	{
+		basicShader.SetUniform("modelMatrix", light->GetModelMatrix());
+		basicShader.SetUniform("inputColor", light->diffuse);
+		light->Draw();
+	}
+	basicShader.Disable();
+
 	const glm::vec3 fNormalColor{ 0.f, 0.f, 1.f };
 	const glm::vec3 vNormalColor = { 1.f, 0.f, 0.f };
 
-	/////////////// DRAW NORMAL VECTORS //////////////
+	///////////// DRAW NORMAL VECTORS //////////////
 	displayNormalShader.Enable();
 	displayNormalShader.SetUniform("viewMatrix", viewMatrix);
-	displayNormalShader.SetUniform("modelMatrix", mainObject->GetModelMatrix());
+	displayNormalShader.SetUniform("projMatrix", projMatrix);
+	displayNormalShader.SetUniform("modelMatrix", glm::mat4(1.f));
 	displayNormalShader.SetUniform("normalLength", normalLength);
+	if (shouldDrawFaceNormal == true)
+	{
+		displayNormalShader.SetUniform("inputColor", fNormalColor);
+		models[0]->DrawFaceNormal(displayNormalShader);
+	}
+	
 	if (shouldDrawVertexNormal == true)
 	{
 		displayNormalShader.SetUniform("inputColor", vNormalColor);
-		mainObject->DrawVertexNormal();
-	}
-
-	if (shouldDrawFaceNormal == true)
-	{
-		displayNormalShader.Enable();
-		displayNormalShader.SetUniform("inputColor", fNormalColor);
-		mainObject->DrawFaceNormal();
+		models[0]->DrawVertexNormal(displayNormalShader);
 	}
 	displayNormalShader.Disable();
-	/////////////// DRAW NORMAL VECTORS //////////////
+	///////////// DRAW NORMAL VECTORS //////////////
 }
 
-void Scene::UpdateCamA(float dt) 
+void Scene::UpdateCamA(float dt)
 {
-	cam.pos -= glm::cross(cam.lookAt, glm::vec3(0.f, 1.f, 0.f)) * cam.moveSpeed * dt; 
+	cam.pos -= glm::cross(cam.lookAt, glm::vec3(0.f, 1.f, 0.f)) * cam.moveSpeed * dt;
 }
 
-void Scene::UpdateCamS(float dt) 
+void Scene::UpdateCamS(float dt)
 {
 	cam.pos -= cam.lookAt * cam.moveSpeed * dt;
 }
 
-void Scene::UpdateCamD(float dt) 
-{ 
+void Scene::UpdateCamD(float dt)
+{
 	cam.pos += glm::cross(cam.lookAt, glm::vec3(0.f, 1.f, 0.f)) * cam.moveSpeed * dt;
 }
 
-void Scene::UpdateCamW(float dt) 
-{ 
+void Scene::UpdateCamW(float dt)
+{
 	cam.pos += cam.lookAt * cam.moveSpeed * dt;
 }
 
@@ -558,4 +563,77 @@ void Scene::UpdateCamRotation(int xDiff, int yDiff)
 	cam.lookAt.x = glm::cos(glm::radians(cam.theta));
 	cam.lookAt.y = glm::sin(glm::radians(cam.pi));
 	cam.lookAt.z = glm::sin(glm::radians(cam.theta));
+}
+
+void Scene::SetupGBuffer()
+{
+	glDeleteFramebuffers(1, &gBuffer);
+	glGenFramebuffers(1, &gBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+
+	//position
+	glGenTextures(1, &gPosition);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+
+	// normal 
+	glGenTextures(1, &gNormal);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+
+	// albedo + spec
+	glGenTextures(1, &gAlbedoSpec);
+	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gAlbedoSpec, 0);
+
+	// depth
+	glGenTextures(1, &gDepth);
+	glBindTexture(GL_TEXTURE_2D, gDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, WIDTH, HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gDepth, 0);
+
+	// - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+	unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+
+	// depth buffer
+	glGenRenderbuffers(1, &depth);
+	glBindRenderbuffer(GL_RENDERBUFFER, depth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
+
+	glDrawBuffers(4, attachments);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		throw std::exception("FBO Setup for deferred shading is failed.");
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Scene::CopyDepthInfo()
+{
+	// bind the gbuffers for read
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+	// write to default framebuffer
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	// copy over depth info
+	glBlitFramebuffer(
+		0, 0, WIDTH, HEIGHT, // source region
+		0, 0, WIDTH, HEIGHT, // destination region
+		GL_DEPTH_BUFFER_BIT, // field to copy
+		GL_NEAREST // filtering mechanism
+	);
+	// set the default framebuffer for draw
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

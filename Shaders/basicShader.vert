@@ -13,12 +13,15 @@ End Header --------------------------------------------------------*/
 
 #version 400 core
 layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 uv;
 
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
+uniform mat4 projMatrix;
 
 void main()
 {
    vec4 worldPos = modelMatrix * vec4(aPos.x, aPos.y, aPos.z, 1.0);
-   gl_Position = viewMatrix * worldPos;
+   gl_Position = projMatrix * viewMatrix * worldPos;
 }

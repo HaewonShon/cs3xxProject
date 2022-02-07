@@ -26,6 +26,7 @@ struct Vertex {
 struct SimpleTexture {
     unsigned int id;
     std::string type;
+    std::string path;
 };
 
 class AssimpMesh {
@@ -34,12 +35,16 @@ public:
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
     std::vector<SimpleTexture>      textures;
+    glm::mat4 parentTransform;
 
     AssimpMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<SimpleTexture> textures);
     void Draw(Shader& shader);
+    void DrawFaceNormal(Shader& shader);
+    void DrawVertexNormal(Shader& shader);
 private:
     //  render data
     unsigned int VAO, VBO, EBO;
-
-    void setupMesh();
+    unsigned int vNormalVAO, fNormalVAO;
+    void Setup();
+    void BuildNormal();
 };

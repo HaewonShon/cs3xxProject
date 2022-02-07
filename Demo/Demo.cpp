@@ -98,10 +98,16 @@ void Demo::Update() noexcept
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
-            isMouseDown = true;
+            if (event.button.button == SDL_BUTTON_RIGHT) 
+            {
+                isMouseDown = true;
+            }
             break;
         case SDL_MOUSEBUTTONUP:
-            isMouseDown = false;
+            if (event.button.button == SDL_BUTTON_RIGHT)
+            {
+                isMouseDown = false;
+            }
             break;
         case SDL_MOUSEMOTION:
             if (isMouseDown == true)

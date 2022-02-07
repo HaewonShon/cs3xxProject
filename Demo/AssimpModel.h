@@ -15,6 +15,7 @@ End Header --------------------------------------------------------*/
 #include "AssimpMesh.h"
 #include <vector>
 #include <string>
+#include <limits>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -30,13 +31,17 @@ public:
         loadModel(path);
     }
     void Draw(Shader& shader);
+    void DrawFaceNormal(Shader& shader);
+    void DrawVertexNormal(Shader& shader);
 private:
     // model data
     std::vector<AssimpMesh> meshes;
     std::string directory;
+    std::vector<SimpleTexture> textures_loaded;
+    glm::vec3 min{ std::numeric_limits<float>::max() }, max{ std::numeric_limits<float>::min() };
 
     void loadModel(std::string path);
-    void processNode(aiNode* node, const aiScene* scene);
+    void processNode(aiNode* node, const aiScene* scene, glm::mat4 transform);
     AssimpMesh processMesh(aiMesh* mesh, const aiScene* scene);
     std::vector<SimpleTexture> loadMaterialTextures(aiMaterial* mat, aiTextureType type,
         std::string typeName);
