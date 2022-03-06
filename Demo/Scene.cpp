@@ -21,6 +21,7 @@ End Header --------------------------------------------------------*/
 #include "Mesh.h"
 #include "LightSphere.h"
 #include "ObjectConverter.h"
+#include <cstring>
 
 int const WIDTH = 1280;
 int const HEIGHT = 720;
@@ -128,6 +129,7 @@ void Scene::Clear()
 	basicShader.Delete();
 	PhongShadingShader.Delete();
 	displayNormalShader.Delete();
+	strcpy_s(buf, 200, "..\\Models\\backpack\\backpack.obj");
 }
 
 void Scene::Draw()
@@ -155,24 +157,19 @@ void Scene::DrawGUI()
 	{
 		ImGui::Indent();
 		constexpr std::array OBJECTS = {
-			"..\\Models\\4Sphere.obj",
-			"..\\Models\\bunny.obj",
-			"..\\Models\\bunny_high_poly.obj",
-			"..\\Models\\cube.obj",
-			"..\\Models\\cube2.obj",
-			"..\\Models\\cup.obj",
-			"..\\Models\\lucy_princeton.obj",
-			"..\\Models\\quad.obj",
-			//"..\\Models\\rhino.obj",
-			"..\\Models\\sphere.obj",
-			"..\\Models\\sphere_modified.obj",
-			//"..\\Models\\starwars1.obj",
-			"..\\Models\\triangle.obj",
+			"..\\Models\\backpack\\backpack.obj"
 		};
 		if (ImGui::Combo("Pick model to render", &currentPickedObject, OBJECTS.data(), static_cast<int>(OBJECTS.size())))
 		{
-			//delete mainObject;
-			//mainObject = CreateObjectFromFile(OBJECTS[currentPickedObject], true, true, static_cast<Mesh::UVType>(currentTexProjMode), currentPickedEntity == 0 ? false : true);
+			for (AssimpModel* mesh : models)
+			{
+				if (mesh)
+				{
+					delete mesh;
+				}
+			}
+			models.clear();
+			models.push_back(new AssimpModel(OBJECTS[currentPickedObject]));
 		}
 		ImGui::Unindent();
 	}

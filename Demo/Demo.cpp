@@ -58,6 +58,8 @@ void Demo::Init()
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    auto io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 400");
 
@@ -68,6 +70,10 @@ void Demo::Init()
 
 void Demo::Update() noexcept
 {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame(window);
+    ImGui::NewFrame();
+
     uint32_t now = SDL_GetTicks();
     float dt = (float)(now - timestamp) / 1000.f;
     timestamp = now;
@@ -75,6 +81,7 @@ void Demo::Update() noexcept
     SDL_Event event{ 0 };
     while (SDL_PollEvent(&event) != 0)
     {
+        ImGui_ImplSDL2_ProcessEvent(&event);
         switch (event.type)
         {
         case SDL_QUIT:
@@ -129,10 +136,6 @@ void Demo::Update() noexcept
 void Demo::Draw() noexcept
 {
     currentLevel->Draw();
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame(window);
-    ImGui::NewFrame();
 
     currentLevel->DrawGUI();
 

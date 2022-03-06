@@ -34,20 +34,20 @@ struct Camera
 class Scene
 {
 public:
-	void Init();
-	void Update([[maybe_unused]] float dt);
-	void Clear();
-	void Draw();
-	void DrawGUI();
-	void Reload();
-	void LoadShaders();
+	virtual void Init();
+	virtual void Update([[maybe_unused]] float dt);
+	virtual void Clear();
+	virtual void Draw();
+	virtual void DrawGUI();
+	virtual void Reload();
+	virtual void LoadShaders();
 
 	void UpdateCamA(float dt);
 	void UpdateCamS(float dt);
 	void UpdateCamD(float dt);
 	void UpdateCamW(float dt);
 	void UpdateCamRotation(int xDiff, int yDiff);
-private:
+protected:
 	void SetUniformBuffer();
 
 	void RenderDeferredObjects();
@@ -121,4 +121,5 @@ private:
 	bool shouldDrawFaceNormal{ false };
 	bool shouldDrawVertexNormal{ false };
 	float normalLength{ 0.1f };
+	char buf[200];
 };
